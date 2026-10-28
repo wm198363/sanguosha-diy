@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#151b19" />
+  <meta name="description" content="三国杀 DIY 武将工坊：创建武将、编写技能、上传立绘、预览卡面与本地保存。" />
+  <title>将作 V4 · 三国杀 DIY 武将工坊</title>
+  <style>
+    :root{
+      --bg:#101613;--surface:#18201b;--surface-2:#202b23;--surface-3:#29362d;
+      --line:#364538;--text:#f1ebdd;--muted:#aaa99c;--subtle:#777f72;
+      --gold:#e8bc70;--gold2:#b88445;--red:#b65850;--green:#9fba91;
+      --serif:"Noto Serif CJK SC","Songti SC","STSong",serif;
+      --sans:Inter,"Noto Sans CJK SC","Microsoft Yahei",system-ui,-apple-system,sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px}
+    body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;background:radial-gradient(ellipse at 75% -10%,#3c3a2355,transparent 52%),radial-gradient(ellipse at 10% 90%,#19382c40,transparent 48%)}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
+    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+    .layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+    aside{background:#141c17;border-right:1px solid #2d3b30;padding:30px 18px 24px;display:flex;flex-direction:column;gap:27px;min-height:100vh}
+    .brand{display:flex;align-items:center;gap:12px;padding:0 8px}
+    .brand-mark{width:43px;height:43px;display:grid;place-items:center;border:1px solid #9c754a;border-radius:11px;background:linear-gradient(140deg,#51432b,#1c231b);color:#f2d6a3;font:700 25px var(--serif);box-shadow:0 0 20px #af824022}
+    .brand-name{font:700 23px var(--serif);letter-spacing:4px;color:#f1ddbb}.brand-sub{margin-top:2px;font-size:10px;letter-spacing:2.3px;color:#958d76}
+    .sidebar-label{font-size:11px;color:#7f8b7c;letter-spacing:2px;margin:4px 10px 11px}
+    .nav-link{display:flex;gap:10px;align-items:center;padding:12px 13px;border:1px solid #6b654822;border-radius:10px;background:linear-gradient(90deg,#4b402c52,#2a302420);color:#efd4a5;font-weight:700}
+    .side-actions{display:grid;gap:7px}
+    .side-action{display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:9px;text-align:left;padding:10px 13px;color:#b4b7aa;transition:.2s}
+    .side-action:hover{background:#28352b;color:#fff}
+    .side-action svg,.nav-link svg{width:17px;height:17px;flex:none}
+    .side-footer{margin-top:auto;border-top:1px solid #2b382e;padding:18px 9px 0;color:#838b7e;font-size:12px;line-height:1.8}
+    .tiny-dot{display:inline-block;background:#a7bd90;width:6px;height:6px;border-radius:50%;margin-right:7px;vertical-align:2px}
+    main{padding:32px clamp(20px,3vw,50px) 50px;min-width:0;max-width:1720px;width:100%;margin:0 auto}
+    .topline{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:28px}
+    .eyebrow{font-size:11px;letter-spacing:3px;color:#c6a26b;font-weight:700;margin-bottom:6px}
+    h1{font:700 clamp(26px,2.3vw,36px)/1.3 var(--serif);margin:0;letter-spacing:1px}
+    .subtitle{color:#9da79b;font-size:13px;margin:8px 0 0}
+    .top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;min-height:39px;padding:9px 15px;border-radius:9px;border:1px solid #455143;background:#273229;color:#ede9de;font-weight:650;transition:.2s;user-select:none}
+    .btn:hover{background:#354437;border-color:#6e775c;transform:translateY(-1px)}
+    .btn svg,.mini-btn svg{width:16px;height:16px}
+    .btn-gold{color:#2b2316;background:linear-gradient(120deg,#e9c98d,#c89c59);border:1px solid #e6b878;box-shadow:0 4px 20px #ca99431f}
+    .btn-gold:hover{background:linear-gradient(120deg,#f4d69c,#d9ad69);border-color:#e9c98d}
+    .btn-plain{background:transparent}
+    .btn-danger{color:#e8afa7;border-color:#76544e;background:#402924}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:27px}
+    .stat{padding:16px 18px;background:linear-gradient(150deg,#222d24b8,#19231c);border:1px solid #334034;border-radius:12px;min-height:95px;position:relative;overflow:hidden}
+    .stat::after{content:"";position:absolute;width:70px;height:70px;right:-17px;top:-20px;border:1px solid #b8a17b23;transform:rotate(45deg)}
+    .stat-name{color:#a8aa9d;font-size:12px}.stat-value{font:700 28px/1.5 var(--serif);color:#e7ddc9}.stat-value.small{font:650 14px/2.8 var(--sans);color:#bad19f}
+    .workspace{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}
+    .panel{background:linear-gradient(160deg,#1b261e,#172119);border:1px solid #364537;border-radius:14px;overflow:hidden;box-shadow:0 9px 35px #0000001b}
+    .panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:20px 22px;border-bottom:1px solid #334033}
+    .panel-title{font:700 17px var(--serif);letter-spacing:1px;margin:0}.panel-kicker{font-size:11px;color:#9e9d8d;margin-top:5px}
+    .panel-body{padding:22px}
+    .section-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}
+    .section-heading h3{margin:0;color:#e1d4b7;font-size:14px;font-weight:700;letter-spacing:.5px}
+    .section-heading .line{flex:1;margin-left:13px;height:1px;background:#3c463a}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .field{display:flex;flex-direction:column;gap:8px;min-width:0}.field.span2{grid-column:span 2}
+    .field label{font-size:12px;color:#bfc4b5;font-weight:600}
+    .input,.select,.textarea{color:#f5f1e7;background:#121b15;border:1px solid #3b4a3b;border-radius:8px;width:100%;padding:11px 12px;min-height:42px;outline:none;transition:border-color .2s}
+    .input:hover,.select:hover,.textarea:hover{border-color:#677056}.input:focus,.select:focus,.textarea:focus{border-color:#d2aa6c;box-shadow:0 0 0 3px #d2aa6c18}
+    .input::placeholder,.textarea::placeholder{color:#647065}.textarea{resize:vertical;line-height:1.8;min-height:96px}
+    .select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23cdb889' stroke-width='2' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+    .select option{background:#19241d}
+    .section-divider{border:0;border-top:1px dashed #3d483d;margin:27px 0 23px}
+    .skill-list{display:flex;flex-direction:column;gap:12px}
+    .skill-editor{background:#151e18;border:1px solid #3c4b3c;border-radius:11px;padding:15px}
+    .skill-top{display:flex;gap:10px;align-items:center;margin-bottom:14px}.skill-number{width:27px;height:27px;border-radius:7px;background:#413a2b;color:#e1bf83;display:grid;place-items:center;font:700 13px var(--serif);flex:none}
+    .skill-top-name{font-weight:700;color:#ddd5c3;flex:1}.skill-actions{display:flex;gap:4px}
+    .mini-btn{width:28px;height:28px;display:grid;place-items:center;border-radius:6px;border:1px solid transparent;background:transparent;color:#929d8c}
+    .mini-btn:hover{border-color:#4c604b;color:#fff;background:#29382b}.mini-btn.danger:hover{color:#f0aba0;background:#432a27;border-color:#75463c}
+    .skill-rows{display:grid;grid-template-columns:1fr 155px;gap:12px;margin-bottom:13px}
+    .skill-editor .textarea{min-height:95px}
+    .add-skill{width:100%;border:1px dashed #6a694b;background:#2a2d2140;color:#dec18c;border-radius:9px;padding:13px;margin-top:12px;font-weight:650}
+    .add-skill:hover{background:#41432a50;border-color:#c1a36b}
+    .art-uploader{display:flex;align-items:center;gap:15px;border:1px dashed #68745c;border-radius:10px;padding:14px;background:#1c271c}
+    .art-thumb{width:66px;height:84px;border:1px solid #5b6850;border-radius:5px;background:radial-gradient(circle,#53634b,#252f28);display:grid;place-items:center;overflow:hidden;color:#cdbb8e;font:700 24px var(--serif);flex:none}
+    .art-thumb img{width:100%;height:100%;object-fit:cover}
+    .art-info{flex:1;min-width:0}.art-info strong{font-size:13px;color:#e4dbca}.art-info p{font-size:11px;color:#919a8b;line-height:1.6;margin:5px 0 10px}
+    .art-control{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-top:17px}
+    .range-label{display:flex;justify-content:space-between;font-size:11px;color:#a7b19e;gap:6px}
+    .range{width:100%;margin:8px 0 0;accent-color:#d7ac6d;cursor:pointer}
+    .preview-panel{position:sticky;top:20px}.preview-head-right{font-size:11px;color:#8c9c88}
+    .preview-body{padding:20px 22px}
+    .card-wrap{max-width:330px;margin:0 auto}.general-card{aspect-ratio:0.68;position:relative;isolation:isolate;border-radius:14px;overflow:hidden;border:5px solid #b49863;background:radial-gradient(circle at 50% 35%,#59634b,#28352b 60%,#18241d);box-shadow:0 8px 0 #75603c,0 12px 0 #3c3828,0 20px 40px #0008;}
+    .general-card::before{content:"";position:absolute;inset:7px;border:1px solid #e9d0a265;border-radius:7px;z-index:5;pointer-events:none}
+    .card-art{position:absolute;inset:0;overflow:hidden;z-index:0}.card-art img{width:100%;height:100%;object-fit:cover;display:block;transform-origin:center}
+    .default-art{width:100%;height:100%;background:radial-gradient(ellipse at 52% 38%,#a28c5862,transparent 37%),repeating-radial-gradient(circle at 80% 80%,#d1bc744a 0 1px,transparent 2px 27px),linear-gradient(120deg,#253a31,#4b553c 57%,#1f3329);display:grid;place-items:center}
+    .default-art b{font:700 145px var(--serif);color:#ddc5952a;transform:rotate(-10deg)}
+    .card-shade{position:absolute;inset:0;background:linear-gradient(90deg,#101c16aa,transparent 56%),linear-gradient(0deg,#121711 0%,#172018f5 16%,#1c261bdb 41%,transparent 66%);z-index:1}
+    .card-top{position:absolute;z-index:2;top:18px;left:16px;right:12px;display:flex;gap:8px;justify-content:space-between;align-items:flex-start}
+    .card-faction{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:4px;border:1px solid #ebd49b77;background:#272a20c9;border-radius:3px;padding:9px 5px;font:700 14px var(--serif);color:#f7dfaa;max-height:92px}
+    .card-right{display:flex;align-items:center;flex-direction:column;gap:9px;flex:none;max-width:45%}
+    .card-hp{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;max-width:90px}
+    .hp-icon{font-size:15px;color:#e7b350;filter:drop-shadow(0px 1px 2px #000)}.hp-icon.empty{color:#666858}
+    .card-title-wrap{position:absolute;z-index:2;top:100px;left:17px;display:flex;flex-direction:row-reverse;gap:8px;align-items:flex-start}
+    .card-name{writing-mode:vertical-rl;font:700 29px/1.35 var(--serif);letter-spacing:4px;color:#fff2d3;text-shadow:2px 3px 4px #000,0 0 9px #000}
+    .card-epithet{writing-mode:vertical-rl;font:500 11px var(--serif);letter-spacing:2px;color:#d9d0b6;text-shadow:0px 2px 5px #000;max-height:170px}
+    .card-lord{font:700 11px var(--serif);color:#ffe2a2;border:1px solid #d1a657;background:#6e332ba8;padding:3px 4px;border-radius:4px}
+    .card-bottom{position:absolute;left:16px;right:16px;bottom:15px;z-index:2;max-height:43%;overflow:hidden}
+    .preview-skill{font-family:var(--serif);font-size:11px;line-height:1.65;margin-top:6px;color:#e7e6d7;text-shadow:1px 1px 2px #000}.preview-skill strong{color:#ecc37b;font-size:13px}.preview-more{color:#e8bd83;font-size:11px;margin-top:7px}
+    .card-foot{border-top:1px solid #d2bd8166;margin-top:8px;padding-top:5px;display:flex;justify-content:space-between;color:#d2bd93b8;font-size:8px;letter-spacing:1px}
+    .preview-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:25px}
+    .preview-note{text-align:center;font-size:11px;line-height:1.7;color:#8f9988;margin:15px 0 0}
+    .collection-section{margin-top:22px}.collection-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px}
+    .collection-head h2{font:700 18px var(--serif);margin:0}.collection-tools{display:flex;gap:10px;align-items:center}
+    .search-box{position:relative}.search-box input{width:220px;padding-left:34px;min-height:37px}
+    .search-box svg{position:absolute;left:11px;top:11px;width:15px;height:15px;color:#929d89}
+    .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px}
+    .filter{border:1px solid #415140;background:#1b261e;color:#aab2a5;padding:7px 12px;border-radius:7px;font-size:12px}
+    .filter.active{border-color:#ba9964;background:#473b2a;color:#f6dbac}
+    .roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(193px,1fr));gap:12px}
+    .roster-item{display:flex;gap:11px;align-items:center;background:#1c281f;border:1px solid #374638;border-radius:11px;padding:10px;text-align:left;color:inherit;min-width:0;transition:.15s}
+    .roster-item:hover{border-color:#7e8060;background:#27342a;transform:translateY(-1px)}.roster-item.active{border-color:#c1a06e;box-shadow:inset 0 0 0 1px #90704433;background:#2c3125}
+    .roster-avatar{width:48px;height:62px;border-radius:5px;background:linear-gradient(145deg,#4c5641,#232e26);border:1px solid #65715a;overflow:hidden;display:grid;place-items:center;flex:none;font:700 23px var(--serif);color:#b4a07b}
+    .roster-avatar img{width:100%;height:100%;object-fit:cover}
+    .roster-data{min-width:0}.roster-data strong{font:700 15px var(--serif);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.roster-data small{display:block;color:#99a395;margin:5px 0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.roster-data em{font-style:normal;color:#d0b078;font-size:11px}
+    .empty{padding:30px 14px;border:1px dashed #495748;background:#1b251e;border-radius:11px;color:#aab2a2;text-align:center;line-height:1.8}
+    .empty-large{min-height:200px;display:grid;place-content:center}.empty-large .emoji{font:700 60px var(--serif);color:#aa885b;margin-bottom:6px}
+    .no-selection{padding:48px 22px;text-align:center;color:#acb4a6}.no-selection h3{font:700 23px var(--serif);color:#f0dfbb;margin:12px 0}.no-selection p{line-height:1.8}
+    .notice{padding:10px 13px;background:#3b3223;border:1px solid #856b42;color:#eed1a1;border-radius:9px;margin-bottom:18px;font-size:12px;line-height:1.7;display:none}
+    .notice.show{display:block}
+    .toast{position:fixed;right:22px;bottom:20px;background:#2c3c2d;color:#eaf0df;padding:12px 16px;border:1px solid #748467;border-radius:9px;box-shadow:0 5px 25px #0007;transform:translateY(70px);opacity:0;transition:.25s;z-index:40;pointer-events:none;font-size:13px;max-width:calc(100vw - 44px)}
+    .toast.show{opacity:1;transform:translateY(0)}
+    .drop-hover{outline:2px dashed #dfba77;outline-offset:-9px}
+    @media(max-width:1280px){.workspace{grid-template-columns:minmax(0,1fr) 320px}main{padding-left:25px;padding-right:25px}.preview-body{padding:20px 18px}}
+    @media(max-width:1100px){.layout{grid-template-columns:1fr}aside{min-height:auto;display:flex;flex-direction:row;align-items:center;padding:14px 23px;gap:16px;border-right:0;border-bottom:1px solid #374537}.side-actions,.side-footer,.sidebar-label,.nav-link{display:none}.brand{padding:0}.brand-mark{width:36px;height:36px;font-size:21px}.brand-name{font-size:20px}main{padding:24px 23px 40px}}
+    @media(max-width:790px){.workspace{grid-template-columns:1fr}.preview-panel{position:static}.card-wrap{max-width:330px}.topline{align-items:flex-start}.stats{grid-template-columns:repeat(2,1fr)}.preview-actions{max-width:360px;margin:25px auto 0}}
+    @media(max-width:510px){main{padding:19px 14px 30px}.topline{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:20px}.top-actions{justify-content:flex-start}.top-actions .btn{flex:1;padding:9px}.stats{gap:9px;margin-bottom:18px}.stat{min-height:75px;padding:12px}.stat-value{font-size:23px}.panel-head{padding:16px}.panel-body{padding:16px}.form-grid{gap:12px}.skill-rows{grid-template-columns:1fr 120px;gap:9px}.section-divider{margin:22px 0}.art-control{gap:9px}.collection-head{align-items:flex-start;flex-direction:column}.collection-tools,.search-box,.search-box input{width:100%}.roster{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.roster-item{gap:8px;padding:7px}.roster-avatar{width:40px;height:53px}.roster-data strong{font-size:13px}.roster-data small,.roster-data em{font-size:10px}.card-wrap{max-width:310px}.art-uploader{gap:10px}.btn{font-size:12px}.art-info p{font-size:10px}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand"><div class="brand-mark">将</div><div><div class="brand-name">将 作</div><div class="brand-sub">DIY GENERAL STUDIO</div></div></div>
+      <div><div class="sidebar-label">创作空间 / WORKSPACE</div><div class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>武将工坊</div></div>
+      <div><div class="sidebar-label">武将库操作 / LIBRARY</div><div class="side-actions">
+        <button class="side-action" id="sideCreate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>新建武将</button>
+        <button class="side-action" id="sideExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12m-4-4 4 4 4-4M5 17v3h14v-3"/></svg>导出备份</button>
+        <button class="side-action" id="sideImport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m-4 4 4-4 4 4M4 17v3h16v-3"/></svg>导入武将</button>
+      </div></div>
+      <div class="side-footer"><span class="tiny-dot"></span>本地优先 · 不需要账号<br>每次修改自动保存到当前浏览器<br>建议定期导出 JSON 备份</div>
+    </aside>
+    <main>
+      <div class="topline">
+        <div><div class="eyebrow">THREE KINGDOMS · CREATIVE WORKSHOP</div><h1>三国杀 DIY 武将工坊</h1><p class="subtitle">设定武将 · 撰写技能 · 上传立绘 · 收藏你的三国世界</p></div>
+        <div class="top-actions"><button class="btn btn-plain" id="exportAll">↓ 导出备份</button><button class="btn btn-gold" id="createBtn">＋ 创建武将</button></div>
+      </div>
+      <div id="storageNotice" class="notice" role="status"></div>
+      <div class="stats"><div class="stat"><div class="stat-name">武将总数</div><div class="stat-value" id="countCharacters">0</div></div><div class="stat"><div class="stat-name">已编写技能</div><div class="stat-value" id="countSkills">0</div></div><div class="stat"><div class="stat-name">已上传立绘</div><div class="stat-value" id="countArt">0</div></div><div class="stat"><div class="stat-name">数据状态</div><div class="stat-value small" id="saveStatus">加载中…</div></div></div>
+      <div class="workspace">
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title" id="editorHeading">武将编辑器</h2><div class="panel-kicker" id="editorSubheading">塑造独一无二的武将</div></div><button class="btn btn-plain" id="duplicateBtn" style="display:none">复制武将</button></div>
+          <div id="editorContent"><div class="no-selection"><div style="font:700 56px var(--serif);color:#c6a66d">将</div><h3>落笔，便是新传</h3><p>点击「创建武将」，开始撰写你的第一张 DIY 武将卡。</p><button class="btn btn-gold" id="emptyCreate">＋ 创建武将</button></div></div>
+        </section>
+        <section class="panel preview-panel">
+          <div class="panel-head"><div><h2 class="panel-title">实时卡面预览</h2><div class="panel-kicker">修改内容，卡面即刻呈现</div></div><div class="preview-head-right">LIVE PREVIEW</div></div>
+          <div class="preview-body"><div class="card-wrap" id="cardPreview"></div><div class="preview-actions"><button class="btn btn-gold" id="savePng">↓ 导出卡面</button><button class="btn" id="deleteChar">删除武将</button></div><p class="preview-note">可导出 PNG 卡面图片；浏览器本地保存可离线使用。</p></div>
+        </section>
+      </div>
+      <section class="collection-section"><div class="collection-head"><h2>我的武将库 <span style="font:400 12px var(--sans);color:#8e9989;margin-left:6px">MY GENERALS</span></h2><div class="collection-tools"><div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input class="input" id="searchInput" placeholder="搜索武将名 / 技能名" aria-label="搜索武将" /></div></div></div>
+        <div class="filters" id="filters"></div><div class="roster" id="roster"></div>
+      </section>
+    </main>
+  </div>
+  <input type="file" id="importFile" accept="application/json,.json" hidden />
+  <input type="file" id="artFile" accept="image/png,image/jpeg,image/webp" hidden />
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const FACTIONS = ['魏','蜀','吴','群','晋','神','其他'];
+    const SKILL_TYPES = ['普通技','锁定技','限定技','觉醒技','主公技','转换技','使命技','隐匿技','其他'];
+    const escapeHTML = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const escapeAttr = escapeHTML;
+    const uid = () => (globalThis.crypto?.randomUUID?.() || ('g'+Date.now()+'_'+Math.random().toString(36).slice(2)));
+    const sample = () => ({id:uid(),name:'示例武将',title:'由你落笔',faction:'魏',gender:'男',hp:4,maxHp:4,lord:false,tag:'原创武将',art:null,artX:50,artY:50,artZoom:100,skills:[{id:uid(),name:'示例技能',type:'普通技',description:'出牌阶段限一次，你可以摸一张牌，然后弃置一张牌。（这是一段示例描述，可直接修改或删除。）'}],createdAt:Date.now(),updatedAt:Date.now()});
+    const makeCharacter = () => ({id:uid(),name:'未命名武将',title:'',faction:'魏',gender:'男',hp:4,maxHp:4,lord:false,tag:'',art:null,artX:50,artY:50,artZoom:100,skills:[],createdAt:Date.now(),updatedAt:Date.now()});
+    let characters = [], selectedId = null, factionFilter = '全部', searchQuery = '', db = null, storageMode = 'indexeddb', dirtyTimer = null, toastTimer = null, inited = false;
+    const selected = () => characters.find(c => c.id === selectedId) || null;
+    function clamp(n,min,max){return Math.max(min,Math.min(max,Number(n)||0));}
+    function normalizeCharacter(x){
+      if(!x || typeof x!=='object')return null;
+      return {
+        id:typeof x.id==='string'&&x.id.length<150?x.id:uid(),name:String(x.name||'未命名武将').slice(0,45),title:String(x.title||'').slice(0,70),
+        faction:FACTIONS.includes(x.faction)?x.faction:'其他',gender:['男','女','其他'].includes(x.gender)?x.gender:'其他',
+        hp:clamp(x.hp??4,0,20),maxHp:clamp(x.maxHp??4,1,20),lord:!!x.lord,tag:String(x.tag||'').slice(0,70),
+        art:typeof x.art==='string' && /^data:image\/(?:png|jpeg|webp);base64,/i.test(x.art) && x.art.length<18000000 ? x.art : null,
+        artX:clamp(x.artX??50,0,100),artY:clamp(x.artY??50,0,100),artZoom:clamp(x.artZoom??100,100,200),
+        skills:Array.isArray(x.skills)?x.skills.slice(0,35).filter(s=>s&&typeof s==='object').map(s=>({id:uid(),name:String(s.name||'未命名技能').slice(0,40),type:SKILL_TYPES.includes(s.type)?s.type:'普通技',description:String(s.description||'').slice(0,10000)})):[],
+        createdAt:Number(x.createdAt)||Date.now(),updatedAt:Number(x.updatedAt)||Date.now()
+      };
+    }
+    async function initDB(){
+      return new Promise((resolve,reject)=>{
+        if(!('indexedDB' in globalThis)){reject(new Error('不支持 IndexedDB'));return;}
+        const req=indexedDB.open('jiangzuo_diy_studio',1);
+        req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('data'))req.result.createObjectStore('data');};
+        req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+      });
+    }
+    async function dbGet(){return new Promise((resolve,reject)=>{const tx=db.transaction('data','readonly');const r=tx.objectStore('data').get('characters');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
+    async function dbPut(value){return new Promise((resolve,reject)=>{const tx=db.transaction('data','readwrite');tx.objectStore('data').put(value,'characters');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
+    function showStorageNotice(text){$('storageNotice').textContent=text;$('storageNotice').classList.add('show');}
+    function setStatus(text){$('saveStatus').textContent=text;}
+    function toast(text){const el=$('toast');el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2700);}
+    async function loadData(){
+      let raw=null;
+      try{db=await initDB();raw=await dbGet();storageMode='indexeddb';}
+      catch(e){storageMode='localstorage';showStorageNotice('当前浏览器无法使用 IndexedDB，已尝试备用保存。若使用本地文件打开，请优先部署到 HTTPS 网站，并经常导出备份。');
+        try{raw=JSON.parse(localStorage.getItem('jiangzuo_characters_v1')||'null');}catch(err){raw=null;}
+      }
+      if(Array.isArray(raw)){characters=raw.map(normalizeCharacter).filter(Boolean);setStatus('✓ 已自动保存');}
+      else {characters=[sample()];await persist();}
+      selectedId=characters[0]?.id||null;
+      renderAll();
+    }
+    let saveChain=Promise.resolve();
+    async function persist(){
+      // A serialized snapshot prevents overlapping saves from overwriting newer data.
+      const snapshot=JSON.parse(JSON.stringify(characters));
+      saveChain=saveChain.catch(()=>{}).then(async()=>{
+        if(storageMode==='indexeddb')await dbPut(snapshot);
+        else localStorage.setItem('jiangzuo_characters_v1',JSON.stringify(snapshot));
+      });
+      try{await saveChain;setStatus('✓ 已自动保存');}catch(e){setStatus('⚠ 保存失败');showStorageNotice('自动保存失败，可能是浏览器存储空间不足。请立即点击「导出备份」，避免数据丢失。');console.error(e);}
+    }
+    function queueSave(){const c=selected();if(c)c.updatedAt=Date.now();setStatus('保存中…');clearTimeout(dirtyTimer);dirtyTimer=setTimeout(()=>{persist();},320);}
+    async function flushSave(){if(dirtyTimer){clearTimeout(dirtyTimer);dirtyTimer=null;await persist();}}
+    function renderStats(){ $('countCharacters').textContent=characters.length;$('countSkills').textContent=characters.reduce((n,c)=>n+c.skills.length,0);$('countArt').textContent=characters.filter(c=>!!c.art).length; }
+    function renderFilters(){
+      $('filters').innerHTML=['全部',...FACTIONS].map(x=>`<button type="button" class="filter ${factionFilter===x?'active':''}" data-filter="${escapeAttr(x)}">${escapeHTML(x)}</button>`).join('');
+    }
+    function rosterAvatar(c){return c.art?`<img alt="" src="${c.art}" style="object-position:${c.artX}% ${c.artY}%">`:escapeHTML((c.name||'将').slice(0,1));}
+    function renderRoster(){
+      const q=searchQuery.trim().toLowerCase();const items=characters.filter(c=>(factionFilter==='全部'||factionFilter===c.faction)&&(!q||[c.name,c.title,c.tag,...c.skills.map(s=>s.name)].some(s=>s.toLowerCase().includes(q))));
+      $('roster').innerHTML=items.length?items.map(c=>`<button type="button" class="roster-item ${c.id===selectedId?'active':''}" data-char="${escapeAttr(c.id)}"><span class="roster-avatar">${rosterAvatar(c)}</span><span class="roster-data"><strong>${escapeHTML(c.name)}</strong><small>${escapeHTML(c.title||'无称号')} · ${escapeHTML(c.faction)}</small><em>${c.maxHp}体力 · ${c.skills.length}技能</em></span></button>`).join(''):`<div class="empty" style="grid-column:1/-1">${characters.length?'没有符合条件的武将':'武将库还空着，点击上方「创建武将」开启创作。'}</div>`;
+    }
+    function skillEditor(s,i){return `<div class="skill-editor" data-skill-id="${escapeAttr(s.id)}">
+      <div class="skill-top"><span class="skill-number">${i+1}</span><span class="skill-top-name">技能 ${String(i+1).padStart(2,'0')}</span><div class="skill-actions">
+        <button type="button" title="上移技能" aria-label="上移技能" data-skill-action="up" class="mini-btn" ${i===0?'disabled':''}>↑</button>
+        <button type="button" title="下移技能" aria-label="下移技能" data-skill-action="down" class="mini-btn" ${i===selected().skills.length-1?'disabled':''}>↓</button>
+        <button type="button" title="删除技能" aria-label="删除技能" data-skill-action="remove" class="mini-btn danger">×</button>
+      </div></div>
+      <div class="skill-rows"><div class="field"><label>技能名称</label><input class="input skill-input" data-skill-field="name" maxlength="40" placeholder="如：观星、奸雄" value="${escapeAttr(s.name)}" /></div>
+      <div class="field"><label>技能类型</label><select class="select skill-input" data-skill-field="type">${SKILL_TYPES.map(t=>`<option value="${escapeAttr(t)}" ${s.type===t?'selected':''}>${escapeHTML(t)}</option>`).join('')}</select></div></div>
+      <div class="field"><label>技能描述</label><textarea class="textarea skill-input" data-skill-field="description" maxlength="10000" placeholder="填写技能触发时机、效果、次数等……">${escapeHTML(s.description)}</textarea></div>
+    </div>`;}
+    function renderEditor(){
+      const c=selected();$('duplicateBtn').style.display=c?'inline-flex':'none';
+      if(!c){$('editorHeading').textContent='武将编辑器';$('editorSubheading').textContent='塑造独一无二的武将';$('editorContent').innerHTML='<div class="no-selection"><div style="font:700 56px var(--serif);color:#c6a66d">将</div><h3>落笔，便是新传</h3><p>点击「创建武将」，开始撰写你的第一张 DIY 武将卡。</p><button class="btn btn-gold" id="emptyCreate">＋ 创建武将</button></div>';return;}
+      $('editorHeading').textContent='武将编辑器 · '+c.name;
+      $('editorSubheading').textContent='修改完成后自动保存，无需手动提交';
+      $('editorContent').innerHTML=`<div class="panel-body">
+        <div class="section-heading"><h3>◈ 基础资料</h3><span class="line"></span></div>
+        <div class="form-grid">
+          <div class="field"><label for="nameField">武将名称</label><input id="nameField" class="input char-input" data-field="name" maxlength="45" value="${escapeAttr(c.name)}" placeholder="武将姓名" /></div>
+          <div class="field"><label for="titleField">武将称号</label><input id="titleField" class="input char-input" data-field="title" maxlength="70" value="${escapeAttr(c.title)}" placeholder="如：奸绝天下" /></div>
+          <div class="field"><label for="factionField">所属势力</label><select id="factionField" class="select char-input" data-field="faction">${FACTIONS.map(t=>`<option ${c.faction===t?'selected':''}>${t}</option>`).join('')}</select></div>
+          <div class="field"><label for="genderField">武将性别</label><select id="genderField" class="select char-input" data-field="gender">${['男','女','其他'].map(t=>`<option ${c.gender===t?'selected':''}>${t}</option>`).join('')}</select></div>
+          <div class="field"><label for="hpField">当前体力</label><input id="hpField" type="number" min="0" max="20" class="input char-input" data-field="hp" value="${c.hp}" /></div>
+          <div class="field"><label for="maxHpField">体力上限</label><input id="maxHpField" type="number" min="1" max="20" class="input char-input" data-field="maxHp" value="${c.maxHp}" /></div>
+          <div class="field span2"><label for="tagField">备注 / 自定义系列</label><input id="tagField" class="input char-input" data-field="tag" maxlength="70" value="${escapeAttr(c.tag)}" placeholder="如：三绝包 / 智包 / 测试中" /></div>
+          <div class="field span2"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="lordField" class="char-input" data-field="lord" ${c.lord?'checked':''} style="accent-color:#d6ad71;width:16px;height:16px" />标记为主公武将</label></div>
+        </div>
+        <hr class="section-divider" />
+        <div class="section-heading"><h3>◈ 技能设计</h3><span style="color:#8e9b88;font-size:12px">共 ${c.skills.length} 项技能</span></div>
+        <div class="skill-list" id="skillList">${c.skills.length?c.skills.map(skillEditor).join(''):'<div class="empty">尚无技能。添加你的第一条技能词条吧。</div>'}</div>
+        <button type="button" class="add-skill" id="addSkill">＋ 添加技能</button>
+        <hr class="section-divider" />
+        <div class="section-heading"><h3>◈ 武将立绘</h3><span class="line"></span></div>
+        <div class="art-uploader" id="artUploader"><div class="art-thumb" id="artThumbnail">${c.art?`<img alt="武将立绘缩略图" src="${c.art}" />`:'画'}</div><div class="art-info"><strong>${c.art?'已上传立绘':'尚未上传立绘'}</strong><p>支持 JPG / PNG / WEBP。上传后自动压缩，可调整卡面里的显示位置。</p><button type="button" class="btn" id="uploadArt">${c.art?'↻ 更换立绘':'↑ 上传立绘'}</button> ${c.art?'<button type="button" class="btn btn-plain" id="removeArt">移除</button>':''}</div></div>
+        <div class="art-control"><div class="field"><div class="range-label"><span>水平位置</span><output id="outX">${c.artX}%</output></div><input class="range art-range" type="range" min="0" max="100" data-art="artX" value="${c.artX}" /></div>
+        <div class="field"><div class="range-label"><span>垂直位置</span><output id="outY">${c.artY}%</output></div><input class="range art-range" type="range" min="0" max="100" data-art="artY" value="${c.artY}" /></div>
+        <div class="field"><div class="range-label"><span>立绘缩放</span><output id="outZoom">${c.artZoom}%</output></div><input class="range art-range" type="range" min="100" max="200" data-art="artZoom" value="${c.artZoom}" /></div></div>
+      </div>`;
+    }
+    const safeArt = url => typeof url==='string' && /^data:image\/(png|jpeg|webp);base64,/i.test(url);
+    let previewSequence=0;
+    async function renderPreview(){
+      const c=selected();$('savePng').disabled=!c;$('deleteChar').disabled=!c;
+      if(!c){$('cardPreview').innerHTML='<div class="empty empty-large">暂无武将卡面</div>';return;}
+      const seq=++previewSequence;
+      try{const canvas=await paintCard(c,2);if(seq!==previewSequence)return;canvas.style.cssText='display:block;width:100%;height:auto;border-radius:10px;box-shadow:0 15px 30px #0008';$('cardPreview').replaceChildren(canvas);}
+      catch(e){console.error(e);$('cardPreview').textContent='预览失败，请重新上传立绘';}
+    }
+    function renderAll(){renderStats();renderFilters();renderRoster();renderEditor();renderPreview();}
+    function refreshAfterEdit(partial=false){renderStats();renderRoster();renderPreview();if(!partial)renderEditor();}
+    function createCharacter(){flushSave();const c=makeCharacter();characters.unshift(c);selectedId=c.id;factionFilter='全部';searchQuery='';$('searchInput').value='';renderAll();queueSave();toast('新武将已创建，开始你的设计吧');$('nameField')?.focus();$('nameField')?.select();}
+    function duplicateCharacter(){const c=selected();if(!c)return;const copy=normalizeCharacter({...c,id:uid(),name:c.name+' · 副本',createdAt:Date.now(),updatedAt:Date.now()});characters.unshift(copy);selectedId=copy.id;renderAll();queueSave();toast('武将已复制');}
+    function deleteCharacter(){const c=selected();if(!c)return;if(!confirm(`确定删除「${c.name}」吗？\n此操作无法撤销，建议先导出备份。`))return;characters=characters.filter(a=>a.id!==c.id);selectedId=characters[0]?.id||null;renderAll();queueSave();toast('武将已删除');}
+    function selectCharacter(id){if(!characters.some(c=>c.id===id))return;flushSave();selectedId=id;renderAll();window.scrollTo({top:0,behavior:'smooth'});}
+    function updateField(field,value){const c=selected();if(!c)return;if(['hp','maxHp'].includes(field))value=clamp(value,field==='hp'?0:1,20);if(field==='lord')value=!!value;c[field]=value;refreshAfterEdit(true);if(field==='name'){$('editorHeading').textContent='武将编辑器 · '+c.name;}queueSave();}
+    function addSkill(){const c=selected();if(!c)return;c.skills.push({id:uid(),name:'新技能',type:'普通技',description:''});refreshAfterEdit();queueSave();const last=[...document.querySelectorAll('.skill-editor')].at(-1);last?.querySelector('[data-skill-field=name]')?.focus();}
+    function changeSkill(id,field,value){const c=selected();const s=c?.skills.find(s=>s.id===id);if(!s)return;s[field]=value;renderPreview();renderRoster();queueSave();}
+    function skillAction(id,action){const c=selected();if(!c)return;const i=c.skills.findIndex(s=>s.id===id);if(i<0)return;if(action==='remove'){if(!confirm(`删除技能「${c.skills[i].name}」？`))return;c.skills.splice(i,1);}else if(action==='up' && i>0){[c.skills[i-1],c.skills[i]]=[c.skills[i],c.skills[i-1]];}else if(action==='down'&&i<c.skills.length-1){[c.skills[i+1],c.skills[i]]=[c.skills[i],c.skills[i+1]];}renderEditor();refreshAfterEdit(true);queueSave();}
+    function setArtPosition(field,value){const c=selected();if(!c)return;c[field]=Number(value);const out={artX:'outX',artY:'outY',artZoom:'outZoom'}[field];$(out).textContent=value+'%';renderPreview();queueSave();}
+    async function handleArtwork(file){
+      if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)){toast('仅支持 PNG、JPG、WEBP 图片');return;}
+      if(file.size>20*1024*1024){toast('图片超过 20MB，请先压缩后上传');return;}
+      const currentId=selectedId;setStatus('处理图片中…');
+      try{
+        const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(file);});
+        const img=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('图片解析失败'));image.src=data;});
+        const scale=Math.min(1,1800/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        const webp=canvas.toDataURL('image/webp',.88);const art=webp.startsWith('data:image/webp')?webp:canvas.toDataURL('image/jpeg',.88);
+        const c=characters.find(x=>x.id===currentId);if(!c)return;c.art=art;c.artX=50;c.artY=50;c.artZoom=100;renderAll();queueSave();toast('立绘上传成功');
+      }catch(err){console.error(err);toast('上传失败，请换一张图片重试');setStatus('上传失败');}finally{$('artFile').value='';}
+    }
+    function exportJSON(){flushSave();const payload={app:'将作·三国杀DIY武将工坊',version:1,exportedAt:new Date().toISOString(),characters};const json=JSON.stringify(payload,null,2);downloadBlob(new Blob([json],{type:'application/json;charset=utf-8'}),`三国杀DIY_武将备份_${dateStamp()}.json`);toast('武将与立绘已打包导出');}
+    function dateStamp(){const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
+    function downloadBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),12000);}
+    async function importJSON(file){
+      if(!file)return;
+      try{
+        if(file.size>90*1024*1024)throw new Error('文件太大');
+        const raw=JSON.parse(await file.text());const arr=Array.isArray(raw)?raw:raw.characters;
+        if(!Array.isArray(arr))throw new Error('不是有效的武将备份');
+        const normalized=arr.slice(0,1000).map(normalizeCharacter).filter(Boolean);
+        if(!normalized.length)throw new Error('备份内没有可用武将');
+        // Import creates new IDs, so existing work is never silently overwritten.
+        normalized.forEach(c=>c.id=uid());
+        characters=[...normalized,...characters];selectedId=normalized[0].id;factionFilter='全部';searchQuery='';$('searchInput').value='';renderAll();await flushSave();await persist();toast(`成功导入 ${normalized.length} 位武将（已保留原武将库）`);
+      }catch(err){console.error(err);toast('导入失败：'+(err.message||'文件格式错误'));}finally{$('importFile').value='';}
+    }
+    // Draw a shareable PNG without third-party dependencies. The editable source is the JSON backup.
+    async function paintCard(c,scale=1){
+      const W=750,H=1050,canvas=document.createElement('canvas');canvas.width=W*scale;canvas.height=H*scale;
+      const x=canvas.getContext('2d');x.scale(scale,scale);
+      const palettes={魏:['#234565','#7799ba','#bcd5e5'],蜀:['#713524','#b67750','#e8b78b'],吴:['#294a35','#75a073','#c6d8a6'],群:['#45464a','#999ba0','#d8d8d8'],晋:['#492557','#8d52a6','#e1b2f2'],神:['#6b5326','#bd9b4f','#f5dea1']};
+      const [dark,mid,light]=palettes[c.faction]||palettes.群;
+      const bg=x.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#292b39');bg.addColorStop(.55,dark);bg.addColorStop(1,'#10141d');x.fillStyle=bg;x.fillRect(0,0,W,H);
+      if(safeArt(c.art)){
+        const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=c.art;});
+        const cover=Math.max(W/img.width,H/img.height)*(Number(c.artZoom)||100)/100,iw=img.width*cover,ih=img.height*cover;
+        x.drawImage(img,(W-iw)*(Number(c.artX)||50)/100,(H-ih)*(Number(c.artY)||50)/100,iw,ih);
+      }else{
+        const mist=x.createRadialGradient(490,420,10,470,440,550);mist.addColorStop(0,mid+'b0');mist.addColorStop(1,'#12121c');x.fillStyle=mist;x.fillRect(0,0,W,H);
+        x.textAlign='center';x.fillStyle='#eee9ee19';x.font='bold 310px serif';x.fillText('将',420,620);
+      }
+      // Soft atmospheric vignette, without a box around the portrait.
+      let shade=x.createLinearGradient(0,0,0,H);shade.addColorStop(0,'#0b0b1880');shade.addColorStop(.18,'#0000');shade.addColorStop(.7,'#0000');shade.addColorStop(1,'#15111b70');x.fillStyle=shade;x.fillRect(0,0,W,H);
+      // A narrow carved faction rail, inspired by the reference's purple lacquer and latticework.
+      const rail=x.createLinearGradient(0,0,116,0);rail.addColorStop(0,'#120d19');rail.addColorStop(.18,mid);rail.addColorStop(.42,dark);rail.addColorStop(.78,'#1d1424');rail.addColorStop(.92,mid);rail.addColorStop(1,'#09080d');x.fillStyle=rail;x.fillRect(0,0,112,H);
+      x.fillStyle='#100e16b8';x.fillRect(21,130,73,795);x.strokeStyle=light;x.lineWidth=3;x.strokeRect(23,132,69,792);
+      x.strokeStyle=light+'9c';x.lineWidth=1.5;for(let y=148;y<913;y+=58){x.strokeRect(31,y,53,49);x.strokeRect(38,y+7,39,35);x.beginPath();x.moveTo(31,y);x.lineTo(84,y+49);x.moveTo(84,y);x.lineTo(31,y+49);x.stroke();}
+      x.fillStyle=dark+'bb';x.fillRect(35,172,46,550);
+      x.strokeStyle='#09080d';x.lineWidth=9;x.beginPath();x.moveTo(110,0);x.lineTo(110,H);x.stroke();x.strokeStyle=light+'bb';x.lineWidth=3;x.beginPath();x.moveTo(105,0);x.lineTo(105,H);x.stroke();
+      // Brush-styled faction emblem.
+      x.save();x.translate(72,70);x.rotate(-.14);x.shadowColor='#000';x.shadowBlur=8;x.textAlign='center';x.textBaseline='middle';x.font='italic bold 93px KaiTi, STKaiti, serif';x.lineWidth=8;x.strokeStyle='#17101e';x.strokeText(c.faction,0,0);x.fillStyle=light;x.fillText(c.faction,0,0);x.restore();
+      // Vertical title in gold, character name in white with black ink outline.
+      const name=[...String(c.name||'未命名武将')].slice(0,8),ep=[...String(c.title||'')].slice(0,14);
+      x.textAlign='center';x.textBaseline='middle';x.font='bold 27px KaiTi,serif';ep.forEach((ch,i)=>{const y=198+i*35;x.lineWidth=4;x.strokeStyle='#100d12';x.strokeText(ch,62,y);x.fillStyle='#f4d768';x.fillText(ch,62,y);});
+      const nameSize=name.length>5?46:63,start=Math.max(420,705-name.length*32);x.font=`bold ${nameSize}px KaiTi,STKaiti,serif`;name.forEach((ch,i)=>{let y=start+i*(nameSize+8);x.lineWidth=7;x.strokeStyle='#08060b';x.strokeText(ch,65,y);x.fillStyle='#fffaf4';x.fillText(ch,65,y);});
+      // Purple comma-shaped magatama, matching the reference's silhouette.
+      const hp=Math.min(12,Math.max(0,Number(c.maxHp)||0));for(let i=0;i<hp;i++){
+        const px=174+(i%8)*48,py=48+Math.floor(i/8)*54; x.save();x.translate(px,py);x.rotate(.18);x.shadowColor='#000';x.shadowBlur=5;
+        x.beginPath();x.moveTo(-11,-12);x.bezierCurveTo(-2,-28,20,-23,21,-5);x.bezierCurveTo(23,8,5,19,-14,22);x.bezierCurveTo(-4,11,-7,4,-13,1);x.bezierCurveTo(-22,-5,-18,-14,-11,-12);x.closePath();
+        const g=x.createLinearGradient(-15,-22,18,20);g.addColorStop(0,i<(Number(c.hp)||0)?'#fff0ff':'#b3a4b9');g.addColorStop(.42,i<(Number(c.hp)||0)?light:'#6d6670');g.addColorStop(1,i<(Number(c.hp)||0)?mid:'#33313b');x.fillStyle=g;x.fill();x.lineWidth=2;x.strokeStyle='#29172e';x.stroke();x.restore();
+      }
+      if(c.lord){x.textAlign='right';x.fillStyle='#f8d99d';x.font='bold 27px serif';x.fillText('主公',W-27,110);}
+      // Skill text panel spans nearly the full card width, with ornamental name plaques.
+      const skills=(c.skills||[]).slice(0,8);let font=22,items=[],need=0;
+      const layout=()=>{x.font=`${font}px sans-serif`;items=skills.map(sk=>({sk,lines:wrapCanvasText(x,(sk.type&&sk.type!=='普通技'?sk.type+'，':'')+(sk.description||'尚未填写技能描述'),W-188)}));need=items.reduce((sum,v)=>sum+Math.max(51,v.lines.length*(font+7)+13),0)+45;};
+      layout();while(need>510&&font>13){font--;layout();}
+      const panelH=Math.max(220,Math.min(525,need)),top=H-panelH;
+      const paper=x.createLinearGradient(0,top,0,H);paper.addColorStop(0,'#f6f5f0e6');paper.addColorStop(1,'#dedce1ed');x.fillStyle=paper;x.fillRect(24,top,W-24,panelH);
+      x.fillStyle='#faf9f9b0';x.beginPath();x.moveTo(24,top);x.lineTo(143,top);x.lineTo(24,top+94);x.fill();
+      x.strokeStyle='#5b3c70aa';x.lineWidth=3;x.beginPath();x.moveTo(24,top);x.lineTo(W,top);x.stroke();
+      let yy=top+18;x.textBaseline='top';for(const {sk,lines} of items){
+        const name=String(sk.name||'技能').slice(0,4);const tw=104;
+        x.fillStyle='#faf1ca';x.strokeStyle=mid;x.lineWidth=3;x.beginPath();x.moveTo(25,yy+3);x.lineTo(25+tw,yy+3);x.lineTo(25+tw+15,yy+23);x.lineTo(25+tw,yy+43);x.lineTo(25,yy+43);x.closePath();x.fill();x.stroke();
+        x.fillStyle='#141015';x.font='bold 26px KaiTi,serif';x.textAlign='center';x.fillText(name,78,yy+10);
+        x.fillStyle='#19171b';x.textAlign='left';x.font=`${font}px sans-serif`;lines.forEach((line,i)=>x.fillText(line,153,yy+3+i*(font+7)));
+        yy+=Math.max(51,lines.length*(font+7)+13);if(yy>H-42)break;
+      }
+      if(!items.length){x.textAlign='center';x.fillStyle='#706b71';x.font='28px serif';x.fillText('武将技能',430,top+87);}
+      x.textBaseline='alphabetic';x.textAlign='center';x.fillStyle='#302a32';x.font='15px serif';x.fillText('原创武将 · 将作 DIY V4',440,H-15);
+      return canvas;
+    }
+    async function exportPNG(){const c=selected();if(!c)return;try{const canvas=await paintCard(c,2);canvas.toBlob(blob=>{if(!blob)return toast('导出失败');downloadBlob(blob,`${c.name.replace(/[\\/:*?"<>|]/g,'_')}_V4武将卡.png`);toast('V4 卡面 PNG 已导出');},'image/png');}catch(e){console.error(e);toast('导出失败，请检查立绘');}}
+    function wrapCanvasText(ctx,text,maxWidth){const out=[];for(const para of String(text).split('\n')){let line='';for(const char of [...para]){if(ctx.measureText(line+char).width>maxWidth&&line){out.push(line);line=char;}else line+=char;}out.push(line);}return out;}
+    function attachEvents(){
+      ['createBtn','sideCreate'].forEach(id=>$(id).addEventListener('click',createCharacter));
+      ['exportAll','sideExport'].forEach(id=>$(id).addEventListener('click',exportJSON));
+      $('sideImport').addEventListener('click',()=>$('importFile').click());
+      $('importFile').addEventListener('change',e=>importJSON(e.target.files?.[0]));
+      $('artFile').addEventListener('change',e=>handleArtwork(e.target.files?.[0]));
+      $('savePng').addEventListener('click',exportPNG);$('deleteChar').addEventListener('click',deleteCharacter);$('duplicateBtn').addEventListener('click',duplicateCharacter);
+      $('searchInput').addEventListener('input',e=>{searchQuery=e.target.value;renderRoster();});
+      $('filters').addEventListener('click',e=>{const btn=e.target.closest('[data-filter]');if(!btn)return;factionFilter=btn.dataset.filter;renderFilters();renderRoster();});
+      $('roster').addEventListener('click',e=>{const btn=e.target.closest('[data-char]');if(btn)selectCharacter(btn.dataset.char);});
+      $('editorContent').addEventListener('click',e=>{
+        if(e.target.closest('#emptyCreate'))return createCharacter();if(e.target.closest('#addSkill'))return addSkill();
+        if(e.target.closest('#uploadArt'))return $('artFile').click();
+        if(e.target.closest('#removeArt')){if(confirm('移除当前武将的立绘吗？')){selected().art=null;renderAll();queueSave();}return;}
+        const btn=e.target.closest('[data-skill-action]');if(btn){const id=btn.closest('[data-skill-id]')?.dataset.skillId;skillAction(id,btn.dataset.skillAction);}
+      });
+      $('editorContent').addEventListener('input',e=>{
+        const t=e.target;if(t.matches('.char-input'))updateField(t.dataset.field,t.type==='checkbox'?t.checked:t.value);
+        else if(t.matches('.skill-input'))changeSkill(t.closest('[data-skill-id]').dataset.skillId,t.dataset.skillField,t.value);
+        else if(t.matches('.art-range'))setArtPosition(t.dataset.art,t.value);
+      });
+      $('editorContent').addEventListener('change',e=>{
+        const t=e.target;if(t.matches('.char-input')){
+          if(t.type==='number'){const c=selected();t.value=c[t.dataset.field];}
+          if(t.dataset.field==='faction')refreshAfterEdit();
+        }
+      });
+      const uploader=$('editorContent');
+      uploader.addEventListener('dragover',e=>{if(e.dataTransfer?.types.includes('Files')){e.preventDefault();$('editorContent').classList.add('drop-hover');}});
+      uploader.addEventListener('dragleave',e=>{if(!uploader.contains(e.relatedTarget))uploader.classList.remove('drop-hover');});
+      uploader.addEventListener('drop',e=>{e.preventDefault();uploader.classList.remove('drop-hover');if(selected())handleArtwork(e.dataTransfer.files[0]);});
+      document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();flushSave();toast('已保存到浏览器');}});
+      window.addEventListener('pagehide',()=>{if(dirtyTimer){clearTimeout(dirtyTimer);dirtyTimer=null;persist();}});
+    }
+    attachEvents();loadData();
+  </script>
+</body>
+</html>
