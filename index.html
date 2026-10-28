@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#151b19" />
   <meta name="description" content="三国杀 DIY 武将工坊：创建武将、编写技能、上传立绘、预览卡面与本地保存。" />
-  <title>将作 · 三国杀 DIY 武将工坊</title>
+  <title>将作 V3 · 三国杀 DIY 武将工坊</title>
   <style>
     :root{
       --bg:#101613;--surface:#18201b;--surface-2:#202b23;--surface-3:#29362d;
@@ -280,16 +280,13 @@
       </div>`;
     }
     const safeArt = url => typeof url==='string' && /^data:image\/(png|jpeg|webp);base64,/i.test(url);
-    function renderPreview(){
+    let previewSequence=0;
+    async function renderPreview(){
       const c=selected();$('savePng').disabled=!c;$('deleteChar').disabled=!c;
-      if(!c){$('cardPreview').innerHTML='<div class="empty empty-large"><div class="emoji">将</div>暂无武将卡面<br>创建一位武将即可开始预览</div>';return;}
-      const visible=c.skills.slice(0,3),extra=c.skills.length-visible.length;
-      const skillText=visible.map(s=>`<div class="preview-skill"><strong>【${escapeHTML(s.name||'未命名')}】</strong>${s.type!=='普通技'?`<span style="color:#cab28e">${escapeHTML(s.type)}，</span>`:''}${escapeHTML(s.description||'尚未填写技能描述')}</div>`).join('');
-      const art=safeArt(c.art)?`<img src="${c.art}" alt="${escapeAttr(c.name)}的立绘" style="object-position:${c.artX}% ${c.artY}%;transform:scale(${c.artZoom/100})">`:'<div class="default-art"><b>将</b></div>';
-      $('cardPreview').innerHTML=`<div class="general-card" aria-label="${escapeAttr(c.name)}的武将卡面预览"><div class="card-art">${art}</div><div class="card-shade"></div>
-       <div class="card-top"><div class="card-faction">${escapeHTML(c.faction)}</div><div class="card-right">${c.lord?'<span class="card-lord">主 公</span>':''}<div class="card-hp">${Array.from({length:Math.min(c.maxHp,10)},(_,i)=>`<span class="hp-icon ${i<c.hp?'':'empty'}">◆</span>`).join('')}${c.maxHp>10?`<span style="font-size:11px;color:#f4cb83">${c.hp}/${c.maxHp}</span>`:''}</div></div></div>
-       <div class="card-title-wrap"><div class="card-name">${escapeHTML(c.name)}</div><div class="card-epithet">${escapeHTML(c.title)}</div></div>
-       <div class="card-bottom">${skillText}${extra?`<div class="preview-more">另有 ${extra} 项技能，完整内容保存在编辑器中…</div>`:''}<div class="card-foot"><span>将作 · DIY 武将工坊</span><span>${escapeHTML(c.tag||'原创设计')}</span></div></div></div>`;
+      if(!c){$('cardPreview').innerHTML='<div class="empty empty-large">暂无武将卡面</div>';return;}
+      const seq=++previewSequence;
+      try{const canvas=await paintCard(c,2);if(seq!==previewSequence)return;canvas.style.cssText='display:block;width:100%;height:auto;border-radius:10px;box-shadow:0 15px 30px #0008';$('cardPreview').replaceChildren(canvas);}
+      catch(e){console.error(e);$('cardPreview').textContent='预览失败，请重新上传立绘';}
     }
     function renderAll(){renderStats();renderFilters();renderRoster();renderEditor();renderPreview();}
     function refreshAfterEdit(partial=false){renderStats();renderRoster();renderPreview();if(!partial)renderEditor();}
@@ -331,69 +328,67 @@
       }catch(err){console.error(err);toast('导入失败：'+(err.message||'文件格式错误'));}finally{$('importFile').value='';}
     }
     // Draw a shareable PNG without third-party dependencies. The editable source is the JSON backup.
-    async function exportPNG(){
-      const c=selected();if(!c)return;
-      try{
-        const W=900,H=1260,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
-        const palettes={'魏':['#243d65','#78b8e4'],'蜀':['#713523','#f0a25d'],'吴':['#244d30','#8cce68'],'群':['#343c42','#c6cbd0'],'晋':['#4e315e','#d7a0f0'],'神':['#77612a','#f4d475']};
-        const [base,accent]=palettes[c.faction]||palettes['群'];
-        const rounded=(x,y,w,h,r)=>{ctx.beginPath();ctx.roundRect(x,y,w,h,r);};
-        const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,accent);grad.addColorStop(.15,base);grad.addColorStop(1,'#111418');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
-        if(safeArt(c.art)){
-          const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=c.art;});
-          const cover=Math.max(W/img.width,H/img.height)*c.artZoom/100;
-          const dw=img.width*cover,dh=img.height*cover;
-          ctx.drawImage(img,-(dw-W)*c.artX/100,-(dh-H)*c.artY/100,dw,dh);
-        }else{ctx.fillStyle='#ffffff22';ctx.textAlign='center';ctx.font='bold 440px serif';ctx.fillText('将',W/2,650);}
-        // Decorative faction frame, inset linework and side title/name rail.
-        const edge=ctx.createLinearGradient(0,0,W,0);edge.addColorStop(0,'#08090b');edge.addColorStop(.05,base);edge.addColorStop(.13,'#131b22');edge.addColorStop(.9,base);edge.addColorStop(1,'#08090b');
-        ctx.fillStyle=edge;ctx.fillRect(0,0,124,H);
-        ctx.fillStyle='#090d11';ctx.fillRect(0,0,14,H);ctx.fillRect(W-15,0,15,H);
-        ctx.strokeStyle=accent;ctx.lineWidth=5;ctx.strokeRect(18,17,W-36,H-34);
-        ctx.strokeStyle='#f7e7bd77';ctx.lineWidth=2;ctx.strokeRect(30,30,W-60,H-60);
-        ctx.strokeStyle=accent+'bb';ctx.lineWidth=3;ctx.strokeRect(56,164,56,780);
-        for(let y=174;y<932;y+=58){ctx.strokeStyle='#ffffff24';ctx.strokeRect(66,y,37,38);}
-        ctx.save();ctx.shadowColor='#000';ctx.shadowBlur=9;
-        ctx.fillStyle='#10131b';ctx.strokeStyle=accent;ctx.lineWidth=6;rounded(20,18,132,130,20);ctx.fill();ctx.stroke();
-        ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 91px serif';ctx.fillStyle=accent;ctx.fillText(c.faction,86,83);
-        ctx.restore();
-        const hp=Math.max(0,Math.min(15,Number(c.maxHp)||0));
-        ctx.textAlign='left';ctx.font='bold 49px serif';ctx.lineWidth=5;ctx.strokeStyle='#151515';
-        for(let i=0;i<hp;i++){const x=188+i*56;if(x>W-55)break;ctx.strokeText('❥',x,78);ctx.fillStyle=i<(Number(c.hp)||0)?accent:'#8d8d8d';ctx.fillText('❥',x,78);}
-        if(c.lord){ctx.fillStyle='#f9e1a5';ctx.font='bold 26px serif';ctx.fillText('主公',W-105,116);}
-        ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=5;ctx.lineWidth=5;ctx.strokeStyle='#050505';ctx.fillStyle='#fff';
-        const names=[...c.name].slice(0,9),ns=names.length>5?62:83;
-        ctx.font=`bold ${ns}px serif`;names.forEach((ch,i)=>{const y=360+i*(ns+8);ctx.strokeText(ch,85,y);ctx.fillText(ch,85,y);});
-        ctx.shadowBlur=0;ctx.fillStyle='#f4d26c';ctx.font='bold 32px serif';[...c.title].slice(0,11).forEach((ch,i)=>ctx.fillText(ch,86,190+i*38));
-        // Transparent pale skill panel with individually shaped labels.
-        const skills=c.skills.slice(0,8),panelBottom=H-53;
-        let font=28,layout=[],panelY=0;
-        const compute=()=>{
-          ctx.font=`${font}px "Noto Sans CJK SC",sans-serif`;
-          layout=skills.map(sk=>{const desc=(sk.type!=='普通技'?sk.type+'，':'')+(sk.description||'尚未填写技能描述');return {sk,lines:wrapCanvasText(ctx,desc,620)};});
-          const height=layout.reduce((sum,o)=>sum+Math.max(55,o.lines.length*(font+8)+12)+8,0)+36;
-          panelY=Math.max(520,panelBottom-height);
-          return height;
-        };
-        compute();while(panelY===520&&font>15){font-=1;compute();}
-        ctx.fillStyle='#f7f3e6d9';ctx.fillRect(125,panelY,W-159,panelBottom-panelY);
-        ctx.strokeStyle=accent;ctx.lineWidth=4;ctx.strokeRect(126,panelY+1,W-162,panelBottom-panelY-2);
-        let y=panelY+22;ctx.textBaseline='top';ctx.textAlign='left';
-        for(const {sk,lines} of layout){
-          const h=Math.max(55,lines.length*(font+8)+12);
-          ctx.fillStyle='#fff0b5';ctx.strokeStyle=base;ctx.lineWidth=3;
-          ctx.beginPath();ctx.moveTo(33,y);ctx.lineTo(176,y);ctx.lineTo(197,y+23);ctx.lineTo(176,y+47);ctx.lineTo(33,y+47);ctx.closePath();ctx.fill();ctx.stroke();
-          ctx.fillStyle='#111';ctx.font=`bold ${Math.min(32,font+5)}px serif`;ctx.textAlign='center';ctx.fillText([...sk.name||'技能'].slice(0,4).join(''),111,y+7);
-          ctx.textAlign='left';ctx.fillStyle='#151515';ctx.font=`${font}px sans-serif`;
-          lines.forEach((line,i)=>ctx.fillText(line,208,y+i*(font+8)+2));
-          y+=h+8;if(y>panelBottom-25)break;
-        }
-        ctx.shadowBlur=0;ctx.fillStyle='#e8e5d8';ctx.fillRect(125,H-53,W-159,32);
-        ctx.fillStyle='#303030';ctx.font='20px sans-serif';ctx.fillText('将作 · DIY 武将工坊',153,H-46);
-        ctx.textAlign='right';ctx.fillText(c.tag||'原创设计',W-62,H-46);
-        canvas.toBlob(blob=>{if(!blob){toast('导出 PNG 失败');return;}downloadBlob(blob,`${c.name.replace(/[\\/:*?"<>|]/g,'_')}_武将卡.png`);toast('新版卡面 PNG 已导出');},'image/png');
-      }catch(err){console.error(err);toast('卡面导出失败，请重新上传立绘再试');}
+    async function paintCard(c,scale=1){
+      const W=750,H=1050,canvas=document.createElement('canvas');canvas.width=W*scale;canvas.height=H*scale;
+      const x=canvas.getContext('2d');x.scale(scale,scale);
+      const theme={魏:['#183e60','#5c9cc2','#b4d9e7'],蜀:['#673019','#ba683a','#f3c493'],吴:['#22472e','#6d9d5c','#d4e4ac'],群:['#353d42','#929ca3','#e0e1d9'],晋:['#503254','#9a79a7','#e1c7e9'],神:['#665020','#c4a25c','#f9e5a8']}[c.faction]||['#353d42','#929ca3','#e0e1d9'];
+      const [dark,mid,light]=theme;
+      const gradient=x.createLinearGradient(0,0,W,H);gradient.addColorStop(0,'#8d7754');gradient.addColorStop(.42,'#3b4139');gradient.addColorStop(1,'#1b2322');x.fillStyle=gradient;x.fillRect(0,0,W,H);
+      if(safeArt(c.art)){
+        const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=c.art;});
+        const cover=Math.max(W/img.width,H/img.height)*(Number(c.artZoom)||100)/100;
+        const iw=img.width*cover,ih=img.height*cover;
+        x.drawImage(img,(W-iw)*(Number(c.artX)||50)/100,(H-ih)*(Number(c.artY)||50)/100,iw,ih);
+      }else{
+        const bg=x.createRadialGradient(440,370,30,440,370,560);bg.addColorStop(0,mid);bg.addColorStop(1,'#111d21');x.fillStyle=bg;x.fillRect(0,0,W,H);
+        x.fillStyle='#e8dbb022';x.textAlign='center';x.font='bold 360px serif';x.fillText('将',W/2,610);
+      }
+      const shade=x.createLinearGradient(0,0,0,H);shade.addColorStop(0,'#1118');shade.addColorStop(.36,'#0000');shade.addColorStop(.68,'#0d131055');shade.addColorStop(1,'#080d0de9');x.fillStyle=shade;x.fillRect(0,0,W,H);
+      // Layered carved metal frame, faction-specific enamel.
+      const rim=x.createLinearGradient(0,0,W,0);rim.addColorStop(0,'#17140e');rim.addColorStop(.025,light);rim.addColorStop(.05,dark);rim.addColorStop(.08,mid);rim.addColorStop(.92,mid);rim.addColorStop(.95,dark);rim.addColorStop(.975,light);rim.addColorStop(1,'#17140e');
+      x.lineJoin='round';x.strokeStyle=rim;x.lineWidth=32;x.strokeRect(16,16,W-32,H-32);
+      x.strokeStyle='#120f0b';x.lineWidth=7;x.strokeRect(33,33,W-66,H-66);
+      x.strokeStyle=light+'b8';x.lineWidth=3;x.strokeRect(42,42,W-84,H-84);
+      x.strokeStyle='#f5df9c99';x.lineWidth=2;x.strokeRect(49,49,W-98,H-98);
+      // Corner engraving and ornamental curls.
+      for(const flipX of [false,true])for(const flipY of [false,true]){
+        x.save();x.translate(flipX?W:0,flipY?H:0);x.scale(flipX?-1:1,flipY?-1:1);
+        x.fillStyle=dark;x.strokeStyle=light;x.lineWidth=4;x.beginPath();x.moveTo(30,30);x.lineTo(157,30);x.quadraticCurveTo(96,57,89,116);x.quadraticCurveTo(60,81,30,154);x.closePath();x.fill();x.stroke();
+        x.strokeStyle='#f4d99d99';x.lineWidth=3;for(let j=0;j<3;j++){x.beginPath();x.arc(53+j*21,52+j*17,14+j*6,Math.PI*.9,Math.PI*1.95);x.stroke();}x.restore();
+      }
+      // Left engraved name rail.
+      const rail=x.createLinearGradient(38,0,168,0);rail.addColorStop(0,dark);rail.addColorStop(.48,'#10191cdd');rail.addColorStop(1,'#151d1d11');x.fillStyle=rail;x.fillRect(43,133,153,570);
+      x.strokeStyle=light+'99';x.lineWidth=3;x.beginPath();x.moveTo(163,154);x.lineTo(163,673);x.stroke();
+      x.save();x.shadowColor='#000';x.shadowBlur=8;x.fillStyle=dark;x.strokeStyle=light;x.lineWidth=6;x.beginPath();x.roundRect(52,62,118,110,16);x.fill();x.stroke();x.restore();
+      x.textAlign='center';x.textBaseline='middle';x.fillStyle=light;x.strokeStyle='#161616';x.lineWidth=4;x.font='bold 79px serif';x.strokeText(c.faction,111,119);x.fillText(c.faction,111,119);
+      // Vertical epithet and name.
+      const name=[...String(c.name||'未命名')].slice(0,8),ep=[...String(c.title||'')].slice(0,12);
+      const fs=name.length>5?49:65;x.textAlign='center';x.font=`bold ${fs}px serif`;
+      name.forEach((ch,i)=>{const y=254+i*(fs+6);x.lineWidth=6;x.strokeStyle='#111';x.strokeText(ch,105,y);x.fillStyle='#fff3ce';x.fillText(ch,105,y);});
+      x.font='25px serif';ep.forEach((ch,i)=>{x.strokeStyle='#111';x.lineWidth=3;x.strokeText(ch,187,230+i*31);x.fillStyle='#f4d69d';x.fillText(ch,187,230+i*31);});
+      // HP gems.
+      const hp=Math.min(12,Math.max(0,Number(c.maxHp)||0));for(let i=0;i<hp;i++){
+        const px=W-84-(i%7)*45,py=93+Math.floor(i/7)*49;
+        x.save();x.translate(px,py);x.rotate(Math.PI/4);x.fillStyle=i<(Number(c.hp)||0)?'#d94935':'#343d3b';x.strokeStyle=i<(Number(c.hp)||0)?'#ffda90':'#9f9b83';x.lineWidth=4;x.beginPath();x.roundRect(-14,-14,28,28,8);x.fill();x.stroke();x.restore();
+      }
+      if(c.lord){x.fillStyle='#f4d79e';x.strokeStyle='#28150e';x.lineWidth=5;x.font='bold 28px serif';x.strokeText('主公',W-115,170);x.fillText('主公',W-115,170);}
+      // Parchment skills overlay, transparent enough to retain artwork.
+      const skills=(c.skills||[]).slice(0,6);let font=22,lines=[],height=0;
+      const layout=()=>{x.font=`${font}px sans-serif`;lines=skills.map(sk=>({sk,wrap:wrapCanvasText(x,(sk.type&&sk.type!=='普通技'?sk.type+'，':'')+(sk.description||'尚未填写技能描述'),490)}));height=lines.reduce((v,o)=>v+Math.max(54,o.wrap.length*(font+7)+13),0)+28;};
+      layout();while(height>405&&font>14){font--;layout();}
+      const panelHeight=Math.max(155,Math.min(445,height));const py=H-70-panelHeight;
+      x.fillStyle='#f2e9d5e3';x.beginPath();x.roundRect(70,py,610,panelHeight,8);x.fill();x.strokeStyle=mid;x.lineWidth=6;x.stroke();
+      x.strokeStyle='#faf0d0';x.lineWidth=2;x.strokeRect(82,py+12,586,panelHeight-24);
+      let yy=py+23;x.textBaseline='top';for(const {sk,wrap} of lines){
+        x.fillStyle=dark;x.beginPath();x.roundRect(94,yy,116,43,5);x.fill();x.strokeStyle=light;x.lineWidth=2;x.stroke();
+        x.fillStyle='#fff0c7';x.textAlign='center';x.font='bold 24px serif';x.fillText([...String(sk.name||'技能')].slice(0,4).join(''),152,yy+8);
+        x.textAlign='left';x.fillStyle='#24201b';x.font=`${font}px sans-serif`;wrap.forEach((line,i)=>x.fillText(line,224,yy+i*(font+7)+2));yy+=Math.max(54,wrap.length*(font+7)+13);if(yy>py+panelHeight-25)break;
+      }
+      if(!skills.length){x.textAlign='center';x.font='28px serif';x.fillStyle='#645c4e';x.fillText('武将技能',375,py+65);}
+      x.textBaseline='alphabetic';x.textAlign='center';x.fillStyle='#eee0b8';x.font='19px serif';x.fillText((c.tag||'原创武将')+'  ·  将作 DIY',W/2,H-47);
+      return canvas;
     }
+    async function exportPNG(){const c=selected();if(!c)return;try{const canvas=await paintCard(c,2);canvas.toBlob(blob=>{if(!blob)return toast('导出失败');downloadBlob(blob,`${c.name.replace(/[\\/:*?"<>|]/g,'_')}_V3武将卡.png`);toast('V3 卡面 PNG 已导出');},'image/png');}catch(e){console.error(e);toast('导出失败，请检查立绘');}}
     function wrapCanvasText(ctx,text,maxWidth){const out=[];for(const para of String(text).split('\n')){let line='';for(const char of [...para]){if(ctx.measureText(line+char).width>maxWidth&&line){out.push(line);line=char;}else line+=char;}out.push(line);}return out;}
     function attachEvents(){
       ['createBtn','sideCreate'].forEach(id=>$(id).addEventListener('click',createCharacter));
