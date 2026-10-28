@@ -334,37 +334,64 @@
     async function exportPNG(){
       const c=selected();if(!c)return;
       try{
-        const W=900,H=1320,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
-        const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#536044');grad.addColorStop(.6,'#263c2f');grad.addColorStop(1,'#111c17');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+        const W=900,H=1260,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d');
+        const palettes={'魏':['#243d65','#78b8e4'],'蜀':['#713523','#f0a25d'],'吴':['#244d30','#8cce68'],'群':['#343c42','#c6cbd0'],'晋':['#4e315e','#d7a0f0'],'神':['#77612a','#f4d475']};
+        const [base,accent]=palettes[c.faction]||palettes['群'];
+        const rounded=(x,y,w,h,r)=>{ctx.beginPath();ctx.roundRect(x,y,w,h,r);};
+        const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,accent);grad.addColorStop(.15,base);grad.addColorStop(1,'#111418');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
         if(safeArt(c.art)){
-          const image=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=c.art;});
-          const cover=Math.max(W/image.width,H/image.height)*c.artZoom/100;const dw=image.width*cover,dh=image.height*cover;
-          const dx=-(dw-W)*c.artX/100,dy=-(dh-H)*c.artY/100;ctx.drawImage(image,dx,dy,dw,dh);
-        }else{
-          ctx.fillStyle='#d6bd7855';ctx.font='bold 490px serif';ctx.textAlign='center';ctx.fillText('将',W/2,670);ctx.textAlign='left';
+          const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=c.art;});
+          const cover=Math.max(W/img.width,H/img.height)*c.artZoom/100;
+          const dw=img.width*cover,dh=img.height*cover;
+          ctx.drawImage(img,-(dw-W)*c.artX/100,-(dh-H)*c.artY/100,dw,dh);
+        }else{ctx.fillStyle='#ffffff22';ctx.textAlign='center';ctx.font='bold 440px serif';ctx.fillText('将',W/2,650);}
+        // Decorative faction frame, inset linework and side title/name rail.
+        const edge=ctx.createLinearGradient(0,0,W,0);edge.addColorStop(0,'#08090b');edge.addColorStop(.05,base);edge.addColorStop(.13,'#131b22');edge.addColorStop(.9,base);edge.addColorStop(1,'#08090b');
+        ctx.fillStyle=edge;ctx.fillRect(0,0,124,H);
+        ctx.fillStyle='#090d11';ctx.fillRect(0,0,14,H);ctx.fillRect(W-15,0,15,H);
+        ctx.strokeStyle=accent;ctx.lineWidth=5;ctx.strokeRect(18,17,W-36,H-34);
+        ctx.strokeStyle='#f7e7bd77';ctx.lineWidth=2;ctx.strokeRect(30,30,W-60,H-60);
+        ctx.strokeStyle=accent+'bb';ctx.lineWidth=3;ctx.strokeRect(56,164,56,780);
+        for(let y=174;y<932;y+=58){ctx.strokeStyle='#ffffff24';ctx.strokeRect(66,y,37,38);}
+        ctx.save();ctx.shadowColor='#000';ctx.shadowBlur=9;
+        ctx.fillStyle='#10131b';ctx.strokeStyle=accent;ctx.lineWidth=6;rounded(20,18,132,130,20);ctx.fill();ctx.stroke();
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 91px serif';ctx.fillStyle=accent;ctx.fillText(c.faction,86,83);
+        ctx.restore();
+        const hp=Math.max(0,Math.min(15,Number(c.maxHp)||0));
+        ctx.textAlign='left';ctx.font='bold 49px serif';ctx.lineWidth=5;ctx.strokeStyle='#151515';
+        for(let i=0;i<hp;i++){const x=188+i*56;if(x>W-55)break;ctx.strokeText('❥',x,78);ctx.fillStyle=i<(Number(c.hp)||0)?accent:'#8d8d8d';ctx.fillText('❥',x,78);}
+        if(c.lord){ctx.fillStyle='#f9e1a5';ctx.font='bold 26px serif';ctx.fillText('主公',W-105,116);}
+        ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=5;ctx.lineWidth=5;ctx.strokeStyle='#050505';ctx.fillStyle='#fff';
+        const names=[...c.name].slice(0,9),ns=names.length>5?62:83;
+        ctx.font=`bold ${ns}px serif`;names.forEach((ch,i)=>{const y=360+i*(ns+8);ctx.strokeText(ch,85,y);ctx.fillText(ch,85,y);});
+        ctx.shadowBlur=0;ctx.fillStyle='#f4d26c';ctx.font='bold 32px serif';[...c.title].slice(0,11).forEach((ch,i)=>ctx.fillText(ch,86,190+i*38));
+        // Transparent pale skill panel with individually shaped labels.
+        const skills=c.skills.slice(0,8),panelBottom=H-53;
+        let font=28,layout=[],panelY=0;
+        const compute=()=>{
+          ctx.font=`${font}px "Noto Sans CJK SC",sans-serif`;
+          layout=skills.map(sk=>{const desc=(sk.type!=='普通技'?sk.type+'，':'')+(sk.description||'尚未填写技能描述');return {sk,lines:wrapCanvasText(ctx,desc,620)};});
+          const height=layout.reduce((sum,o)=>sum+Math.max(55,o.lines.length*(font+8)+12)+8,0)+36;
+          panelY=Math.max(520,panelBottom-height);
+          return height;
+        };
+        compute();while(panelY===520&&font>15){font-=1;compute();}
+        ctx.fillStyle='#f7f3e6d9';ctx.fillRect(125,panelY,W-159,panelBottom-panelY);
+        ctx.strokeStyle=accent;ctx.lineWidth=4;ctx.strokeRect(126,panelY+1,W-162,panelBottom-panelY-2);
+        let y=panelY+22;ctx.textBaseline='top';ctx.textAlign='left';
+        for(const {sk,lines} of layout){
+          const h=Math.max(55,lines.length*(font+8)+12);
+          ctx.fillStyle='#fff0b5';ctx.strokeStyle=base;ctx.lineWidth=3;
+          ctx.beginPath();ctx.moveTo(33,y);ctx.lineTo(176,y);ctx.lineTo(197,y+23);ctx.lineTo(176,y+47);ctx.lineTo(33,y+47);ctx.closePath();ctx.fill();ctx.stroke();
+          ctx.fillStyle='#111';ctx.font=`bold ${Math.min(32,font+5)}px serif`;ctx.textAlign='center';ctx.fillText([...sk.name||'技能'].slice(0,4).join(''),111,y+7);
+          ctx.textAlign='left';ctx.fillStyle='#151515';ctx.font=`${font}px sans-serif`;
+          lines.forEach((line,i)=>ctx.fillText(line,208,y+i*(font+8)+2));
+          y+=h+8;if(y>panelBottom-25)break;
         }
-        const shading=ctx.createLinearGradient(0,0,0,H);shading.addColorStop(0,'#111c1799');shading.addColorStop(.45,'#131c1410');shading.addColorStop(.57,'#111b14d0');shading.addColorStop(1,'#101710fa');ctx.fillStyle=shading;ctx.fillRect(0,0,W,H);
-        ctx.strokeStyle='#c5a56a';ctx.lineWidth=28;ctx.strokeRect(14,14,W-28,H-28);ctx.strokeStyle='#eddbab91';ctx.lineWidth=3;ctx.strokeRect(37,37,W-74,H-74);
-        ctx.textBaseline='middle';ctx.textAlign='left';ctx.font='bold 46px serif';ctx.fillStyle='#f3dca4';ctx.fillText(c.faction,66,99);
-        ctx.textAlign='right';ctx.font='bold 32px serif';ctx.fillStyle='#ecc77b';ctx.fillText(`${c.hp} / ${c.maxHp} 体力`,W-70,100);
-        if(c.lord){ctx.font='bold 26px serif';ctx.fillStyle='#fae1b3';ctx.fillText('主公',W-70,150);}
-        ctx.save();ctx.shadowColor='#000';ctx.shadowBlur=15;ctx.fillStyle='#fff0d0';ctx.font=`bold ${c.name.length>6?48:62}px serif`;
-        // Vertical character name and epithet.
-        const name=[...c.name];name.slice(0,12).forEach((ch,i)=>ctx.fillText(ch,90,205+i*68));
-        ctx.font='27px serif';ctx.fillStyle='#e3d3ad';[...c.title].slice(0,19).forEach((ch,i)=>ctx.fillText(ch,169,220+i*33));ctx.restore();
-        const panelY=790;const bg=ctx.createLinearGradient(0,panelY,0,H);bg.addColorStop(0,'#1b251cbd');bg.addColorStop(1,'#101810fa');ctx.fillStyle=bg;ctx.fillRect(42,panelY,W-84,H-panelY-42);
-        ctx.strokeStyle='#baa16d65';ctx.lineWidth=2;ctx.strokeRect(50,panelY+5,W-100,H-panelY-55);
-        ctx.textAlign='left';let y=835;
-        const maxSkills=Math.min(c.skills.length,4);
-        for(let n=0;n<maxSkills;n++){
-          const s=c.skills[n];ctx.font='bold 32px serif';ctx.fillStyle='#f0ca88';const heading=`【${s.name||'未命名技能'}】`;
-          ctx.fillText(heading,77,y);y+=38;
-          ctx.font='23px serif';ctx.fillStyle='#f3eee1';const desc=(s.type!=='普通技'?s.type+'：':'')+(s.description||'尚未填写技能描述');
-          const lines=wrapCanvasText(ctx,desc,734);for(const line of lines.slice(0,4)){if(y>H-135)break;ctx.fillText(line,81,y);y+=32;}y+=15;if(y>H-160)break;
-        }
-        if(c.skills.length>maxSkills){ctx.fillStyle='#e8c88b';ctx.font='23px serif';ctx.fillText(`另有 ${c.skills.length-maxSkills} 项技能`,80,H-128);}
-        ctx.font='20px serif';ctx.fillStyle='#cfbb98';ctx.fillText('将作 · DIY 武将工坊',78,H-70);ctx.textAlign='right';ctx.fillText(c.tag||'原创设计',W-77,H-70);
-        canvas.toBlob(blob=>{if(!blob){toast('导出 PNG 失败');return;}downloadBlob(blob,`${c.name.replace(/[\\/:*?"<>|]/g,'_')}_武将卡.png`);toast('卡面 PNG 已导出');},'image/png');
+        ctx.shadowBlur=0;ctx.fillStyle='#e8e5d8';ctx.fillRect(125,H-53,W-159,32);
+        ctx.fillStyle='#303030';ctx.font='20px sans-serif';ctx.fillText('将作 · DIY 武将工坊',153,H-46);
+        ctx.textAlign='right';ctx.fillText(c.tag||'原创设计',W-62,H-46);
+        canvas.toBlob(blob=>{if(!blob){toast('导出 PNG 失败');return;}downloadBlob(blob,`${c.name.replace(/[\\/:*?"<>|]/g,'_')}_武将卡.png`);toast('新版卡面 PNG 已导出');},'image/png');
       }catch(err){console.error(err);toast('卡面导出失败，请重新上传立绘再试');}
     }
     function wrapCanvasText(ctx,text,maxWidth){const out=[];for(const para of String(text).split('\n')){let line='';for(const char of [...para]){if(ctx.measureText(line+char).width>maxWidth&&line){out.push(line);line=char;}else line+=char;}out.push(line);}return out;}
